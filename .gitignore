@@ -108,4 +108,16 @@ Thumbs.db
 .netlify/
 
 # Vercel
-.vercel/ 
+.vercel/
+
+# Deployment scripts (no longer needed)
+deploy-*.sh
+deploy-*.ps1
+deploy-*.md
+RAILWAY_DEPLOYMENT.md
+HEROKU_DEPLOYMENT.md
+DEPLOYMENT.md
+
+# Package lock files (will be regenerated)
+package-lock.json
+*/package-lock.json 
