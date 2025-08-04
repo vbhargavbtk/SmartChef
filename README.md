@@ -45,8 +45,4 @@ A full-stack web application that uses AI to generate recipes, plan meals, and c
 
 
 
-## 🙏 Acknowledgments
 
-- Google Gemini AI for recipe generation
-- MongoDB Atlas for database hosting
-- Netlify and Render.com for hosting
