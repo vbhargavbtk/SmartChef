@@ -50,6 +50,20 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'SmartChef API is running' });
 });
 
+// Root endpoint for testing
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'SmartChef Backend API is running!',
+    endpoints: {
+      health: '/api/health',
+      auth: '/api/auth',
+      recipes: '/api/recipes',
+      mealPlan: '/api/meal-plan',
+      groceryList: '/api/grocery-list'
+    }
+  });
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
