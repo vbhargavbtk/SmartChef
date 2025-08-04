@@ -3,7 +3,11 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
-require('dotenv').config({ path: './config.env' });
+
+// Load environment variables - works for both local and production
+if (process.env.NODE_ENV !== 'production') {
+  require('dotenv').config({ path: './config.env' });
+}
 
 const authRoutes = require('./routes/auth');
 const recipeRoutes = require('./routes/recipes');
@@ -61,7 +65,13 @@ app.use('*', (req, res) => {
 });
 
 // MongoDB connection
-mongoose.connect(process.env.MONGO_URI)
+const mongoUri = process.env.MONGO_URI || process.env.MONGODB_URI;
+if (!mongoUri) {
+  console.error('MongoDB URI not found in environment variables');
+  process.exit(1);
+}
+
+mongoose.connect(mongoUri)
   .then(() => {
     console.log('Connected to MongoDB Atlas');
     app.listen(PORT, () => {
