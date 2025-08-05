@@ -68,6 +68,14 @@ const recipeSchema = new mongoose.Schema({
     default: true
   },
   originalIngredients: [String], // Store the original ingredients used for generation
+  generationParams: {
+    inputIngredients: [String],
+    cuisineType: String,
+    dietaryPreferences: [String],
+    maxCookTime: Number,
+    difficulty: String,
+    servings: Number
+  },
   createdAt: {
     type: Date,
     default: Date.now

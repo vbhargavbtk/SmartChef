@@ -7,7 +7,7 @@ import Login from './pages/Login'
 import Register from './pages/Register'
 import Dashboard from './pages/Dashboard'
 import RecipeGenerator from './pages/RecipeGenerator'
-import MealPlanner from './pages/MealPlanner'
+
 import GroceryList from './pages/GroceryList'
 import ProtectedRoute from './components/auth/ProtectedRoute'
 
@@ -38,14 +38,7 @@ function App() {
               </ProtectedRoute>
             } 
           />
-          <Route 
-            path="/meal-planner" 
-            element={
-              <ProtectedRoute>
-                <MealPlanner />
-              </ProtectedRoute>
-            } 
-          />
+
           <Route 
             path="/grocery-list" 
             element={

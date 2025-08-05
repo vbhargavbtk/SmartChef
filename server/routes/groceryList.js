@@ -1,7 +1,8 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
 const Recipe = require('../models/Recipe');
-const MealPlan = require('../models/MealPlan');
+
+const GroceryList = require('../models/GroceryList');
 const auth = require('../middleware/auth');
 
 const router = express.Router();
@@ -9,17 +10,19 @@ const router = express.Router();
 // Get user's grocery lists
 router.get('/', auth, async (req, res) => {
   try {
-    // For now, return empty array since we don't have a grocery list model yet
-    res.json([]);
+    const groceryLists = await GroceryList.find({ userId: req.user._id })
+      .sort({ updatedAt: -1 });
+    
+    res.json(groceryLists);
   } catch (error) {
     console.error('Get grocery lists error:', error);
     res.status(500).json({ error: 'Failed to fetch grocery lists' });
   }
 });
 
-// Generate grocery list from meal plan
-router.post('/generate', auth, [
-  body('mealPlanId').isMongoId().withMessage('Valid meal plan ID is required')
+// Save grocery list
+router.post('/save', auth, [
+  body('items').isArray().withMessage('Items array is required')
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -27,69 +30,40 @@ router.post('/generate', auth, [
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { mealPlanId } = req.body;
+    const { items, name = 'My Grocery List' } = req.body;
 
-    // Get meal plan with populated recipes
-    const mealPlan = await MealPlan.findById(mealPlanId)
-      .populate({
-        path: 'dailyPlan.monday dailyPlan.tuesday dailyPlan.wednesday dailyPlan.thursday dailyPlan.friday dailyPlan.saturday dailyPlan.sunday',
-        model: 'Recipe'
+    // Find existing grocery list or create new one
+    let groceryList = await GroceryList.findOne({ userId: req.user._id });
+    
+    if (groceryList) {
+      // Update existing list
+      groceryList.items = items;
+      groceryList.name = name;
+      groceryList.updatedAt = Date.now();
+    } else {
+      // Create new list
+      groceryList = new GroceryList({
+        userId: req.user._id,
+        name: name,
+        items: items
       });
-
-    if (!mealPlan) {
-      return res.status(404).json({ error: 'Meal plan not found' });
     }
 
-    // Check if user owns the meal plan
-    if (mealPlan.userId.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ error: 'Access denied' });
-    }
+    await groceryList.save();
 
-    // Collect all ingredients from all recipes
-    const allIngredients = [];
-    const ingredientMap = new Map(); // To track quantities
-
-    // Process each day's recipes
-    for (const day in mealPlan.dailyPlan) {
-      const recipes = mealPlan.dailyPlan[day];
-      if (recipes && recipes.length > 0) {
-        recipes.forEach(recipe => {
-          if (recipe.ingredients) {
-            recipe.ingredients.forEach(ingredient => {
-              const key = `${ingredient.name.toLowerCase()}-${ingredient.category}`;
-              if (ingredientMap.has(key)) {
-                const existing = ingredientMap.get(key);
-                existing.amount = combineAmounts(existing.amount, ingredient.amount);
-              } else {
-                ingredientMap.set(key, {
-                  name: ingredient.name,
-                  amount: ingredient.amount,
-                  category: ingredient.category
-                });
-              }
-            });
-          }
-        });
-      }
-    }
-
-    // Convert map to array and group by category
-    const groceryList = groupByCategory(Array.from(ingredientMap.values()));
+    // Grocery list saved successfully
 
     res.json({
-      message: 'Grocery list generated successfully',
-      groceryList,
-      mealPlan: {
-        weekStart: mealPlan.weekStart,
-        weekEnd: mealPlan.weekEnd,
-        totalRecipes: Object.values(mealPlan.dailyPlan).flat().length
-      }
+      message: 'Grocery list saved successfully',
+      groceryList: groceryList
     });
   } catch (error) {
-    console.error('Generate grocery list error:', error);
-    res.status(500).json({ error: 'Failed to generate grocery list' });
+    console.error('Save grocery list error:', error);
+    res.status(500).json({ error: 'Failed to save grocery list' });
   }
 });
+
+
 
 // Generate grocery list from specific recipes
 router.post('/from-recipes', auth, [
@@ -110,8 +84,18 @@ router.post('/from-recipes', auth, [
       userId: req.user._id
     });
 
+    // Found recipes for grocery list generation
+
     if (recipes.length !== recipeIds.length) {
-      return res.status(400).json({ error: 'Some recipes not found or access denied' });
+      return res.status(400).json({ 
+        error: `Some recipes not found or access denied. Requested: ${recipeIds.length}, Found: ${recipes.length}` 
+      });
+    }
+
+    if (recipes.length === 0) {
+      return res.status(400).json({ 
+        error: 'No recipes found. Please save some recipes first.' 
+      });
     }
 
     // Collect all ingredients
@@ -135,12 +119,27 @@ router.post('/from-recipes', auth, [
       }
     });
 
-    // Convert map to array and group by category
-    const groceryList = groupByCategory(Array.from(ingredientMap.values()));
+    // Convert map to array and format for frontend
+    const groceryItems = Array.from(ingredientMap.values()).map(ingredient => ({
+      id: Date.now() + Math.random(), // Generate unique ID
+      name: ingredient.name,
+      category: capitalizeFirst(ingredient.category || 'Other'),
+      quantity: 1,
+      unit: ingredient.amount.replace(/[\d.]/g, '').trim() || '',
+      checked: false
+    }));
+
+    // Generated grocery items from recipes successfully
+
+    if (groceryItems.length === 0) {
+      return res.status(400).json({ 
+        error: 'No ingredients found in the selected recipes. Please make sure your recipes have ingredients listed.' 
+      });
+    }
 
     res.json({
       message: 'Grocery list generated successfully',
-      groceryList,
+      items: groceryItems,
       recipes: recipes.map(recipe => ({
         id: recipe._id,
         title: recipe.title
@@ -154,48 +153,94 @@ router.post('/from-recipes', auth, [
 
 // Helper function to combine ingredient amounts
 function combineAmounts(amount1, amount2) {
+  // Handle undefined or null amounts
+  if (!amount1 && !amount2) return '';
+  if (!amount1) return amount2 || '';
+  if (!amount2) return amount1 || '';
+  
   // Simple combination logic - in a real app, you'd want more sophisticated parsing
   const num1 = parseFloat(amount1) || 0;
   const num2 = parseFloat(amount2) || 0;
   
   if (num1 === 0 && num2 === 0) {
-    return amount1 || amount2;
+    return amount1 || amount2 || '';
   }
   
   const total = num1 + num2;
-  const unit = amount1.replace(/[\d.]/g, '').trim() || amount2.replace(/[\d.]/g, '').trim();
+  const unit1 = (amount1 || '').replace(/[\d.]/g, '').trim();
+  const unit2 = (amount2 || '').replace(/[\d.]/g, '').trim();
+  const unit = unit1 || unit2;
   
-  return `${total} ${unit}`.trim();
+  return unit ? `${total} ${unit}`.trim() : total.toString();
 }
 
-// Helper function to group ingredients by category
-function groupByCategory(ingredients) {
-  const categories = {
-    produce: [],
-    dairy: [],
-    meat: [],
-    pantry: [],
-    spices: [],
-    other: []
-  };
-
-  ingredients.forEach(ingredient => {
-    const category = ingredient.category || 'other';
-    if (categories[category]) {
-      categories[category].push(ingredient);
-    } else {
-      categories.other.push(ingredient);
+// Update grocery list item
+router.put('/item/:itemId', auth, [
+  body('checked').optional().isBoolean(),
+  body('quantity').optional().isInt({ min: 1 }),
+  body('unit').optional().isString()
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
     }
-  });
 
-  // Remove empty categories
-  Object.keys(categories).forEach(category => {
-    if (categories[category].length === 0) {
-      delete categories[category];
+    const { itemId } = req.params;
+    const { checked, quantity, unit } = req.body;
+
+    const groceryList = await GroceryList.findOne({ userId: req.user._id });
+    
+    if (!groceryList) {
+      return res.status(404).json({ error: 'Grocery list not found' });
     }
-  });
 
-  return categories;
+    const item = groceryList.items.id(itemId);
+    if (!item) {
+      return res.status(404).json({ error: 'Item not found' });
+    }
+
+    if (checked !== undefined) item.checked = checked;
+    if (quantity !== undefined) item.quantity = quantity;
+    if (unit !== undefined) item.unit = unit;
+
+    groceryList.updatedAt = Date.now();
+    await groceryList.save();
+
+    res.json({
+      message: 'Item updated successfully',
+      item: item
+    });
+  } catch (error) {
+    console.error('Update grocery item error:', error);
+    res.status(500).json({ error: 'Failed to update item' });
+  }
+});
+
+// Get current grocery list
+router.get('/current', auth, async (req, res) => {
+  try {
+    const groceryList = await GroceryList.findOne({ userId: req.user._id });
+    
+    if (!groceryList) {
+      return res.json({ items: [] });
+    }
+
+    res.json({
+      items: groceryList.items,
+      name: groceryList.name,
+      updatedAt: groceryList.updatedAt
+    });
+  } catch (error) {
+    console.error('Get current grocery list error:', error);
+    res.status(500).json({ error: 'Failed to fetch current grocery list' });
+  }
+});
+
+// Helper function to capitalize first letter
+function capitalizeFirst(str) {
+  if (!str) return 'Other';
+  return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
 }
 
 module.exports = router; 

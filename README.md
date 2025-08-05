@@ -4,8 +4,8 @@ A full-stack web application that uses AI to generate recipes, plan meals, and c
 
 ## 🚀 Live Application
 
-- **Frontend:** [Netlify](https://yoursmartchef.netlify.app)
-- **Backend:** [Render.com](https://smartchef-backend-il6w.onrender.com)
+- **Frontend:** [Deployed on your chosen platform]
+- **Backend:** [Deployed on your chosen platform]
 
 ## ✨ Features
 
@@ -62,14 +62,20 @@ A full-stack web application that uses AI to generate recipes, plan meals, and c
 
 3. **Set up environment variables**
    
-   Create `server/config.env`:
+   Copy the example files and configure them:
+   ```bash
+   # For server
+   cp server/env.example server/.env
+   
+   # For client
+   cp client/env.example client/.env
    ```
-   MONGO_URI=your_mongodb_connection_string
-   JWT_SECRET=your_jwt_secret
-   GEMINI_API_KEY=your_gemini_api_key
-   PORT=5000
-   NODE_ENV=development
-   ```
+   
+   Update the `.env` files with your actual values:
+   - `MONGO_URI`: Your MongoDB connection string
+   - `JWT_SECRET`: A secure random string for JWT tokens
+   - `GEMINI_API_KEY`: Your Google Gemini API key
+   - `VITE_API_URL`: Your backend API URL (for production)
 
 4. **Run the application**
    ```bash
@@ -107,37 +113,66 @@ Smart Chef/
 - `POST /api/auth/login` - User login
 - `GET /api/auth/profile` - Get user profile
 - `POST /api/recipes/generate` - Generate AI recipes
-- `GET /api/meal-plan` - Get meal plans
-- `POST /api/meal-plan` - Create meal plan
+
 - `GET /api/grocery-list` - Get grocery lists
 - `POST /api/grocery-list` - Create grocery list
 
 ## 🚀 Deployment
 
-### Frontend (Netlify)
-1. Connect GitHub repository to Netlify
-2. Set build command: `npm run build`
-3. Set publish directory: `dist`
-4. Set environment variable: `VITE_API_URL=https://your-backend-url.onrender.com`
+### Frontend Deployment
+You can deploy the frontend to any static hosting platform:
 
-### Backend (Render.com)
+**Netlify:**
+1. Connect your GitHub repository
+2. Set build command: `cd client && npm install && npm run build`
+3. Set publish directory: `client/dist`
+4. Add environment variable: `VITE_API_URL=https://your-backend-url.com`
+
+**Vercel:**
+1. Connect your GitHub repository
+2. Set root directory: `client`
+3. Build command: `npm run build`
+4. Output directory: `dist`
+
+**GitHub Pages:**
+1. Set up GitHub Actions workflow
+2. Build and deploy to `gh-pages` branch
+
+### Backend Deployment
+You can deploy the backend to any Node.js hosting platform:
+
+**Render.com:**
 1. Create new Web Service
 2. Connect GitHub repository
 3. Set root directory: `server`
-4. Set build command: `npm install`
-5. Set start command: `npm start`
+4. Build command: `npm install`
+5. Start command: `npm start`
 6. Configure environment variables
 
-## 🤝 Contributing
+**Railway:**
+1. Connect GitHub repository
+2. Set root directory: `server`
+3. Configure environment variables
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Submit a pull request
+**Heroku:**
+1. Connect GitHub repository
+2. Set buildpack: `heroku/nodejs`
+3. Configure environment variables
 
-## 📄 License
+### Environment Variables for Production
+Make sure to set these environment variables in your hosting platform:
+- `MONGO_URI`: Your MongoDB Atlas connection string
+- `JWT_SECRET`: A secure random string
+- `GEMINI_API_KEY`: Your Google Gemini API key
+- `NODE_ENV`: Set to `production`
+- `FRONTEND_URL`: Your frontend domain (for CORS)
 
-This project is licensed under the MIT License.
+### GitHub Actions (Optional)
+For automated deployment, you can set up GitHub Actions workflows. Create `.github/workflows/` directory and add deployment workflows for your preferred hosting platforms.
+
+
+
+
 
 ## 🙏 Acknowledgments
 

@@ -11,7 +11,7 @@ if (process.env.NODE_ENV !== 'production') {
 
 const authRoutes = require('./routes/auth');
 const recipeRoutes = require('./routes/recipes');
-const mealPlanRoutes = require('./routes/mealPlan');
+
 const groceryListRoutes = require('./routes/groceryList');
 
 const app = express();
@@ -20,19 +20,23 @@ const PORT = process.env.PORT || 5000;
 // Security middleware
 app.use(helmet());
 
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100 // limit each IP to 100 requests per windowMs
-});
-app.use(limiter);
+// Rate limiting - disabled for development
+if (process.env.NODE_ENV === 'production') {
+  const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100 // limit each IP to 100 requests per windowMs
+  });
+  app.use(limiter);
+}
 
 // CORS configuration
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
     ? true  // Allow all origins in production for now
-    : ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175', 'http://localhost:5176', 'http://localhost:5177', 'http://localhost:5178', 'http://localhost:3000'],
-  credentials: true
+    : true, // Allow all origins in development
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 // Body parsing middleware
@@ -42,7 +46,7 @@ app.use(express.urlencoded({ extended: true }));
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/recipes', recipeRoutes);
-app.use('/api/meal-plan', mealPlanRoutes);
+
 app.use('/api/grocery-list', groceryListRoutes);
 
 // Health check endpoint
@@ -58,7 +62,7 @@ app.get('/', (req, res) => {
       health: '/api/health',
       auth: '/api/auth',
       recipes: '/api/recipes',
-      mealPlan: '/api/meal-plan',
+
       groceryList: '/api/grocery-list'
     }
   });
@@ -87,9 +91,9 @@ if (!mongoUri) {
 
 mongoose.connect(mongoUri)
   .then(() => {
-    console.log('Connected to MongoDB Atlas');
+    console.log('✅ Connected to MongoDB Atlas');
     app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
+              console.log(`🚀 Server running on port ${PORT}`);
     });
   })
   .catch((err) => {

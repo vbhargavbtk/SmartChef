@@ -27,15 +27,12 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const [recipesRes, mealPlansRes] = await Promise.all([
-          axios.get('/api/recipes/saved'),
-          axios.get('/api/meal-plan')
-        ])
+        const recipesRes = await axios.get('/api/recipes/saved')
 
         setStats({
           savedRecipes: recipesRes.data.length,
-          mealPlans: mealPlansRes.data.length,
-          groceryLists: 0 // Will be calculated from meal plans
+          mealPlans: 0,
+          groceryLists: 0
         })
 
         setRecentRecipes(recipesRes.data.slice(0, 3))
@@ -61,13 +58,7 @@ const Dashboard = () => {
       path: '/recipe-generator',
       color: 'bg-blue-500'
     },
-    {
-      title: 'Plan Meals',
-      description: 'Schedule your weekly meals',
-      icon: Calendar,
-      path: '/meal-planner',
-      color: 'bg-green-500'
-    },
+
     {
       title: 'Grocery List',
       description: 'Create shopping list',
@@ -112,17 +103,7 @@ const Dashboard = () => {
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-            <div className="flex items-center">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <Calendar className="h-6 w-6 text-green-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Meal Plans</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.mealPlans}</p>
-              </div>
-            </div>
-          </div>
+
 
           <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
             <div className="flex items-center">

@@ -31,15 +31,55 @@ router.post('/generate', auth, [
     };
 
     // Generate recipe using Gemini AI
-    const recipeData = await generateRecipe(ingredients, preferences, cuisineType, maxCookTime);
+    const recipeData = await generateRecipe(ingredients, preferences, cuisineType, maxCookTime, difficulty, servings);
 
-    // Add user ID and original ingredients
-    recipeData.userId = req.user._id;
-    recipeData.originalIngredients = ingredients;
+    // Convert ingredients to the format expected by Recipe model
+    const formattedIngredients = recipeData.ingredients.map(ingredient => {
+      if (typeof ingredient === 'string') {
+        return {
+          name: ingredient,
+          amount: 'as needed',
+          category: 'other'
+        }
+      }
+      return ingredient
+    });
+
+    // Save directly to Recipe collection (central database)
+    const recipeToSave = {
+      userId: req.user._id,
+      title: recipeData.title,
+      ingredients: formattedIngredients,
+      instructions: recipeData.instructions,
+      cookTime: recipeData.cookTime.toString(),
+      estimatedCalories: recipeData.estimatedCalories || 0,
+      cuisine: recipeData.cuisine || 'General',
+      dietaryTags: recipeData.dietaryTags || [],
+      difficulty: recipeData.difficulty?.toLowerCase() || 'medium',
+      servings: recipeData.servings,
+      isGenerated: true,
+      originalIngredients: ingredients,
+      generationParams: {
+        inputIngredients: ingredients,
+        cuisineType: cuisineType || '',
+        dietaryPreferences: dietaryPreferences || [],
+        maxCookTime: maxCookTime,
+        difficulty: difficulty,
+        servings: servings
+      }
+    };
+
+    const savedRecipe = new Recipe(recipeToSave);
+    await savedRecipe.save();
+
+    // Add recipe to user's saved recipes
+    const user = await User.findById(req.user._id);
+    user.savedRecipes.push(savedRecipe._id);
+    await user.save();
 
     res.json({
-      message: 'Recipe generated successfully',
-      recipe: recipeData
+      message: 'Recipe generated and saved successfully',
+      recipe: savedRecipe
     });
   } catch (error) {
     console.error('Recipe generation error:', error);
@@ -86,7 +126,7 @@ router.post('/save', auth, [
   }
 });
 
-// Get user's saved recipes
+// Get user's saved recipes (all recipes - generated and manual)
 router.get('/saved', auth, async (req, res) => {
   try {
     const recipes = await Recipe.find({ userId: req.user._id })
@@ -96,6 +136,42 @@ router.get('/saved', auth, async (req, res) => {
   } catch (error) {
     console.error('Get saved recipes error:', error);
     res.status(500).json({ error: 'Failed to fetch saved recipes' });
+  }
+});
+
+// Get user's generated recipes (for history view)
+router.get('/generated', auth, async (req, res) => {
+  try {
+    const recipes = await Recipe.find({ 
+      userId: req.user._id,
+      isGenerated: true 
+    }).sort({ createdAt: -1 });
+
+    res.json(recipes);
+  } catch (error) {
+    console.error('Get generated recipes error:', error);
+    res.status(500).json({ error: 'Failed to fetch generated recipes' });
+  }
+});
+
+// Get specific recipe
+router.get('/:id', auth, async (req, res) => {
+  try {
+    const recipe = await Recipe.findById(req.params.id);
+    
+    if (!recipe) {
+      return res.status(404).json({ error: 'Recipe not found' });
+    }
+
+    // Check if user owns the recipe
+    if (recipe.userId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    res.json({ recipe });
+  } catch (error) {
+    console.error('Get recipe error:', error);
+    res.status(500).json({ error: 'Failed to fetch recipe' });
   }
 });
 
@@ -189,5 +265,7 @@ router.delete('/:id', auth, async (req, res) => {
     res.status(500).json({ error: 'Failed to delete recipe' });
   }
 });
+
+
 
 module.exports = router; 

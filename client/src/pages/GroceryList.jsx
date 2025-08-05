@@ -4,7 +4,6 @@ import {
   Plus, 
   Trash2, 
   Download, 
-  Calendar,
   ChefHat,
   Loader2,
   CheckCircle,
@@ -12,14 +11,13 @@ import {
 } from 'lucide-react'
 import axios from 'axios'
 import toast from 'react-hot-toast'
+import jsPDF from 'jspdf'
 
 const GroceryList = () => {
   const [groceryList, setGroceryList] = useState([])
-  const [mealPlans, setMealPlans] = useState([])
   const [savedRecipes, setSavedRecipes] = useState([])
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
-  const [selectedMealPlan, setSelectedMealPlan] = useState('')
   const [selectedRecipes, setSelectedRecipes] = useState([])
   const [newItem, setNewItem] = useState('')
   const [newItemCategory, setNewItemCategory] = useState('Produce')
@@ -36,17 +34,19 @@ const GroceryList = () => {
   const fetchData = async () => {
     setLoading(true)
     try {
-      const [mealPlansRes, recipesRes, groceryListRes] = await Promise.all([
-        axios.get('/api/meal-plan'),
+      const [recipesRes, groceryListRes] = await Promise.all([
         axios.get('/api/recipes/saved'),
-        axios.get('/api/grocery-list')
+        axios.get('/api/grocery-list/current')
       ])
 
-      setMealPlans(mealPlansRes.data)
+
+
       setSavedRecipes(recipesRes.data)
       
-      if (groceryListRes.data.length > 0) {
-        setGroceryList(groceryListRes.data[0].items || [])
+      if (groceryListRes.data.items && groceryListRes.data.items.length > 0) {
+        setGroceryList(groceryListRes.data.items)
+      } else {
+        setGroceryList([])
       }
     } catch (error) {
       console.error('Error fetching data:', error)
@@ -56,27 +56,7 @@ const GroceryList = () => {
     }
   }
 
-  const generateFromMealPlan = async () => {
-    if (!selectedMealPlan) {
-      toast.error('Please select a meal plan')
-      return
-    }
 
-    setGenerating(true)
-    try {
-      const response = await axios.post('/api/grocery-list/generate', {
-        mealPlanId: selectedMealPlan
-      })
-
-      setGroceryList(response.data.items)
-      toast.success('Grocery list generated from meal plan!')
-    } catch (error) {
-      console.error('Error generating grocery list:', error)
-      toast.error('Failed to generate grocery list')
-    } finally {
-      setGenerating(false)
-    }
-  }
 
   const generateFromRecipes = async () => {
     if (selectedRecipes.length === 0) {
@@ -91,46 +71,91 @@ const GroceryList = () => {
       })
 
       setGroceryList(response.data.items)
+      
+      // Save the generated list to backend
+      await axios.post('/api/grocery-list/save', {
+        items: response.data.items
+      });
+      
       toast.success('Grocery list generated from recipes!')
     } catch (error) {
       console.error('Error generating grocery list:', error)
-      toast.error('Failed to generate grocery list')
+      const errorMessage = error.response?.data?.error || 'Failed to generate grocery list'
+      toast.error(errorMessage)
     } finally {
       setGenerating(false)
     }
   }
 
-  const addItem = () => {
+  const addItem = async () => {
     if (newItem.trim()) {
       const item = {
-        id: Date.now(),
         name: newItem.trim(),
         category: newItemCategory,
-        quantity: 1,
-        unit: '',
         checked: false
       }
+      
+      // Update local state immediately for better UX
       setGroceryList([...groceryList, item])
       setNewItem('')
       setNewItemCategory('Produce')
+      
+      // Save to backend
+      try {
+        await axios.post('/api/grocery-list/save', {
+          items: [...groceryList, item]
+        });
+      } catch (error) {
+        console.error('Error adding item:', error);
+        toast.error('Failed to add item');
+        // Remove item from local state on error
+        setGroceryList(groceryList);
+      }
     }
   }
 
-  const removeItem = (itemId) => {
-    setGroceryList(groceryList.filter(item => item.id !== itemId))
+  const removeItem = async (itemId) => {
+    try {
+      // Update local state immediately for better UX
+      const updatedList = groceryList.filter(item => item._id !== itemId);
+      setGroceryList(updatedList);
+      
+      // Save the updated list to backend
+      await axios.post('/api/grocery-list/save', {
+        items: updatedList
+      });
+    } catch (error) {
+      console.error('Error removing item:', error);
+      toast.error('Failed to remove item');
+      // Revert local state on error
+      setGroceryList(groceryList);
+    }
   }
 
-  const toggleItem = (itemId) => {
-    setGroceryList(groceryList.map(item => 
-      item.id === itemId ? { ...item, checked: !item.checked } : item
-    ))
+  const toggleItem = async (itemId) => {
+    try {
+      const updatedItem = groceryList.find(item => item._id === itemId);
+      const newChecked = !updatedItem.checked;
+      
+      // Update local state immediately for better UX
+      const updatedList = groceryList.map(item => 
+        item._id === itemId ? { ...item, checked: newChecked } : item
+      );
+      setGroceryList(updatedList);
+      
+      // Save the entire updated list to backend
+      await axios.post('/api/grocery-list/save', {
+        items: updatedList
+      });
+    } catch (error) {
+      console.error('Error updating item:', error);
+      toast.error('Failed to update item');
+      // Revert local state on error
+      setGroceryList(groceryList);
+    }
   }
 
-  const updateItemQuantity = (itemId, quantity) => {
-    setGroceryList(groceryList.map(item => 
-      item.id === itemId ? { ...item, quantity: Math.max(1, quantity) } : item
-    ))
-  }
+
 
   const saveGroceryList = async () => {
     try {
@@ -144,9 +169,114 @@ const GroceryList = () => {
     }
   }
 
-  const exportToPDF = () => {
-    // This would integrate with a PDF generation library
-    toast.success('PDF export feature coming soon!')
+
+
+  const exportToPDF = async () => {
+    if (groceryList.length === 0) {
+      toast.error('No items in grocery list to export')
+      return
+    }
+
+    try {
+      toast.loading('Generating PDF...', { id: 'grocery-pdf-export' })
+      
+      const pdf = new jsPDF('p', 'mm', 'a4')
+      const pageWidth = pdf.internal.pageSize.getWidth()
+      const pageHeight = pdf.internal.pageSize.getHeight()
+      const margin = 20
+      const contentWidth = pageWidth - (2 * margin)
+      
+      let yPosition = margin
+      
+      // Add title
+      pdf.setFontSize(24)
+      pdf.setFont('helvetica', 'bold')
+      pdf.text('Grocery List', pageWidth / 2, yPosition, { align: 'center' })
+      yPosition += 15
+      
+      // Add date
+      pdf.setFontSize(12)
+      pdf.setFont('helvetica', 'normal')
+      pdf.text(`Generated on: ${new Date().toLocaleDateString()}`, pageWidth / 2, yPosition, { align: 'center' })
+      yPosition += 15
+      
+      // Get items grouped by category
+      const groupedItems = getItemsByCategory()
+      
+      // Add items by category
+      Object.keys(groupedItems).forEach(category => {
+        const items = groupedItems[category]
+        if (items.length > 0) {
+          // Check if we need a new page
+          if (yPosition > pageHeight - 60) {
+            pdf.addPage()
+            yPosition = margin
+          }
+          
+          // Add category header
+          pdf.setFontSize(16)
+          pdf.setFont('helvetica', 'bold')
+          pdf.text(category, margin, yPosition)
+          yPosition += 10
+          
+          // Add items in this category
+          pdf.setFontSize(12)
+          pdf.setFont('helvetica', 'normal')
+          items.forEach(item => {
+            // Check if we need a new page
+            if (yPosition > pageHeight - 40) {
+              pdf.addPage()
+              yPosition = margin
+            }
+            
+            const checkbox = item.checked ? '☑' : '☐'
+            const itemText = `${checkbox} ${item.name}`
+            pdf.text(itemText, margin + 5, yPosition)
+            yPosition += 6
+          })
+          
+          yPosition += 5 // Add space between categories
+        }
+      })
+      
+      // Add summary
+      if (yPosition > pageHeight - 60) {
+        pdf.addPage()
+        yPosition = margin
+      }
+      
+      pdf.setFontSize(14)
+      pdf.setFont('helvetica', 'bold')
+      pdf.text('Summary:', margin, yPosition)
+      yPosition += 10
+      
+      pdf.setFontSize(12)
+      pdf.setFont('helvetica', 'normal')
+      const totalItems = groceryList.length
+      const checkedItems = groceryList.filter(item => item.checked).length
+      const uncheckedItems = totalItems - checkedItems
+      
+      pdf.text(`Total Items: ${totalItems}`, margin, yPosition)
+      yPosition += 6
+      pdf.text(`Completed: ${checkedItems}`, margin, yPosition)
+      yPosition += 6
+      pdf.text(`Remaining: ${uncheckedItems}`, margin, yPosition)
+      
+      // Add footer
+      const footerText = `Generated by SmartChef - ${new Date().toLocaleDateString()}`
+      pdf.setFontSize(10)
+      pdf.setFont('helvetica', 'italic')
+      pdf.text(footerText, pageWidth / 2, pageHeight - 10, { align: 'center' })
+      
+      // Save the PDF
+      const fileName = `grocery_list_${new Date().toISOString().split('T')[0]}.pdf`
+      pdf.save(fileName)
+      
+      toast.success('Grocery list PDF exported successfully!', { id: 'grocery-pdf-export' })
+    } catch (error) {
+      console.error('Error exporting grocery list PDF:', error)
+      toast.error('Failed to export PDF', { id: 'grocery-pdf-export' })
+    }
   }
 
   const getItemsByCategory = () => {
@@ -184,13 +314,6 @@ const GroceryList = () => {
             </div>
             <div className="flex space-x-3">
               <button
-                onClick={saveGroceryList}
-                className="btn-primary flex items-center"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Save List
-              </button>
-              <button
                 onClick={exportToPDF}
                 className="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition-colors flex items-center"
               >
@@ -200,50 +323,13 @@ const GroceryList = () => {
             </div>
           </div>
           <p className="text-gray-600">
-            Generate grocery lists from your meal plans or add items manually
+            Generate grocery lists from your saved recipes or add items manually. Your changes are saved automatically.
           </p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Generation Options */}
           <div className="lg:col-span-1 space-y-6">
-            {/* Generate from Meal Plan */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                <Calendar className="h-5 w-5 mr-2 text-primary-600" />
-                From Meal Plan
-              </h2>
-              
-              <div className="space-y-4">
-                <select
-                  value={selectedMealPlan}
-                  onChange={(e) => setSelectedMealPlan(e.target.value)}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                >
-                  <option value="">Select a meal plan</option>
-                  {mealPlans.map(plan => (
-                    <option key={plan._id} value={plan._id}>
-                      Week of {new Date(plan.weekStart).toLocaleDateString()}
-                    </option>
-                  ))}
-                </select>
-                
-                <button
-                  onClick={generateFromMealPlan}
-                  disabled={generating || !selectedMealPlan}
-                  className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
-                >
-                  {generating ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Generating...
-                    </>
-                  ) : (
-                    'Generate List'
-                  )}
-                </button>
-              </div>
-            </div>
 
             {/* Generate from Recipes */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -295,30 +381,39 @@ const GroceryList = () => {
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Add Item</h2>
               
               <div className="space-y-4">
-                <input
-                  type="text"
-                  value={newItem}
-                  onChange={(e) => setNewItem(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  placeholder="Enter item name"
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                />
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Item Name</label>
+                  <input
+                    type="text"
+                    value={newItem}
+                    onChange={(e) => setNewItem(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    placeholder="e.g., Tomatoes, Milk, Bread"
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  />
+                </div>
                 
-                <select
-                  value={newItemCategory}
-                  onChange={(e) => setNewItemCategory(e.target.value)}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                >
-                  {categories.map(category => (
-                    <option key={category} value={category}>{category}</option>
-                  ))}
-                </select>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
+                  <select
+                    value={newItemCategory}
+                    onChange={(e) => setNewItemCategory(e.target.value)}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  >
+                    {categories.map(category => (
+                      <option key={category} value={category}>{category}</option>
+                    ))}
+                  </select>
+                </div>
+                
+
                 
                 <button
                   onClick={addItem}
                   disabled={!newItem.trim()}
-                  className="w-full bg-primary-600 text-white py-2 px-4 rounded-md hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="w-full bg-primary-600 text-white py-2 px-4 rounded-md hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
                 >
+                  <Plus className="h-4 w-4 mr-2" />
                   Add Item
                 </button>
               </div>
@@ -328,7 +423,21 @@ const GroceryList = () => {
           {/* Grocery List Display */}
           <div className="lg:col-span-2">
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-6">Shopping List</h2>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-semibold text-gray-900">Shopping List</h2>
+                <div className="flex items-center space-x-4 text-sm">
+                  <div className="bg-green-50 px-3 py-1 rounded-full border border-green-200">
+                    <span className="text-green-700 font-medium">
+                      {groceryList.filter(item => item.checked).length} of {groceryList.length} items
+                    </span>
+                  </div>
+                  <div className="bg-blue-50 px-3 py-1 rounded-full border border-blue-200">
+                    <span className="text-blue-700 font-medium">
+                      {groceryList.length} total items
+                    </span>
+                  </div>
+                </div>
+              </div>
               
               {groceryList.length > 0 ? (
                 <div className="space-y-6">
@@ -340,49 +449,34 @@ const GroceryList = () => {
                         <h3 className="font-semibold text-gray-900 mb-3 border-b border-gray-200 pb-2">
                           {category}
                         </h3>
-                        <div className="space-y-2">
+                        <div className="space-y-3">
                           {items.map(item => (
-                            <div key={item.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                              <div className="flex items-center space-x-3">
+                            <div key={item._id} className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+                              <div className="flex items-center space-x-4 flex-1">
                                 <button
-                                  onClick={() => toggleItem(item.id)}
-                                  className="text-gray-400 hover:text-primary-600 transition-colors"
+                                  onClick={() => toggleItem(item._id)}
+                                  className="text-gray-400 hover:text-primary-600 transition-colors flex-shrink-0"
                                 >
                                   {item.checked ? (
-                                    <CheckCircle className="h-5 w-5 text-green-600" />
+                                    <CheckCircle className="h-6 w-6 text-green-600" />
                                   ) : (
-                                    <Circle className="h-5 w-5" />
+                                    <Circle className="h-6 w-6" />
                                   )}
                                 </button>
-                                <span className={`${item.checked ? 'line-through text-gray-500' : 'text-gray-900'}`}>
-                                  {item.name}
-                                </span>
+                                
+                                <div className="flex-1 min-w-0">
+                                  <span className={`text-lg font-medium ${item.checked ? 'line-through text-gray-500' : 'text-gray-900'}`}>
+                                    {item.name}
+                                  </span>
+                                </div>
                               </div>
                               
-                              <div className="flex items-center space-x-3">
-                                <input
-                                  type="number"
-                                  value={item.quantity}
-                                  onChange={(e) => updateItemQuantity(item.id, parseInt(e.target.value) || 1)}
-                                  className="w-16 border border-gray-300 rounded px-2 py-1 text-center text-sm"
-                                  min="1"
-                                />
-                                <input
-                                  type="text"
-                                  value={item.unit}
-                                  onChange={(e) => {
-                                    setGroceryList(groceryList.map(i => 
-                                      i.id === item.id ? { ...i, unit: e.target.value } : i
-                                    ))
-                                  }}
-                                  placeholder="unit"
-                                  className="w-20 border border-gray-300 rounded px-2 py-1 text-center text-sm"
-                                />
+                              <div className="flex items-center space-x-4">
                                 <button
-                                  onClick={() => removeItem(item.id)}
-                                  className="text-gray-400 hover:text-red-500 transition-colors"
+                                  onClick={() => removeItem(item._id)}
+                                  className="text-gray-400 hover:text-red-500 transition-colors p-2 rounded-lg hover:bg-red-50"
                                 >
-                                  <Trash2 className="h-4 w-4" />
+                                  <Trash2 className="h-5 w-5" />
                                 </button>
                               </div>
                             </div>

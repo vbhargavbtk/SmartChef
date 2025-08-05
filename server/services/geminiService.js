@@ -1,17 +1,17 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const { generateMockRecipe, generateMockMealPlan } = require('./mockRecipeService');
+const { generateMockRecipe } = require('./mockRecipeService');
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-const generateRecipe = async (ingredients, preferences = {}, cuisine = '', maxCookTime = 60) => {
+const generateRecipe = async (ingredients, preferences = {}, cuisine = '', maxCookTime = 60, difficulty = 'medium', servings = 4) => {
   try {
-    console.log('Generating recipe with:', { ingredients, preferences, cuisine, maxCookTime });
+    // Generating recipe with provided parameters
     
     // Try Gemini API first
     try {
       const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-      const prompt = `You are SmartChef, a helpful AI chef. Given the ingredients: ${ingredients.join(', ')}, dietary preferences: ${preferences.diet || 'none'}, cuisine: ${cuisine || 'any'}, max cook time: ${maxCookTime} minutes, generate a recipe in JSON format:
+      const prompt = `You are SmartChef, a helpful AI chef. Given the ingredients: ${ingredients.join(', ')}, dietary preferences: ${preferences.diet || 'none'}, cuisine: ${cuisine || 'any'}, max cook time: ${maxCookTime} minutes, difficulty level: ${difficulty}, servings: ${servings}, generate a recipe in JSON format:
 
 {
   "title": "Recipe Title",
@@ -40,7 +40,9 @@ Important guidelines:
 - Provide clear, step-by-step instructions
 - Estimate calories accurately
 - Categorize ingredients properly
-- Make sure cook time is within the specified limit
+- Make sure cook time is within the specified limit (${maxCookTime} minutes maximum)
+- Set difficulty level to "${difficulty}" (easy/medium/hard)
+- Set servings to exactly ${servings}
 - Add appropriate dietary tags
 - Return ONLY valid JSON, no additional text`;
 
@@ -61,11 +63,29 @@ Important guidelines:
         throw new Error('Missing required recipe fields');
       }
       
+      // Validate and enforce constraints
+      const cookTimeMatch = recipeData.cookTime.match(/(\d+)/);
+      const actualCookTime = cookTimeMatch ? parseInt(cookTimeMatch[1]) : 60;
+      
+      if (actualCookTime > maxCookTime) {
+        recipeData.cookTime = `${maxCookTime} minutes`;
+      }
+      
+      if (difficulty && difficulty !== 'any') {
+        recipeData.difficulty = difficulty.toLowerCase();
+      }
+      
+      if (servings) {
+        recipeData.servings = servings;
+      }
+      
+      // Recipe generated successfully with constraints applied
+      
       return recipeData;
     } catch (geminiError) {
-      console.log('Gemini API failed, using mock recipe service:', geminiError.message);
+      // Gemini API failed, using mock recipe service as fallback
       // Fall back to mock service
-      return await generateMockRecipe(ingredients, preferences, cuisine, maxCookTime);
+      return await generateMockRecipe(ingredients, preferences, cuisine, maxCookTime, difficulty, servings);
     }
   } catch (error) {
     console.error('Recipe generation error:', error);
@@ -73,61 +93,8 @@ Important guidelines:
   }
 };
 
-const generateMealPlan = async (preferences, days = 7) => {
-  try {
-    // Try Gemini API first
-    try {
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-      const prompt = `You are SmartChef, a meal planning assistant. Generate a ${days}-day meal plan based on these preferences: ${JSON.stringify(preferences)}.
-
-Return the response in JSON format:
-{
-  "mealPlan": [
-    {
-      "day": "Monday",
-      "meals": [
-        {
-          "type": "breakfast|lunch|dinner|snack",
-          "title": "Meal Title",
-          "estimatedCalories": 500,
-          "cookTime": "30 minutes",
-          "ingredients": ["ingredient1", "ingredient2"]
-        }
-      ]
-    }
-  ]
-}
-
-Guidelines:
-- Include variety in meals
-- Consider dietary restrictions
-- Balance nutrition
-- Keep cook times reasonable
-- Return ONLY valid JSON`;
-
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text();
-      
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        throw new Error('Invalid response format from AI');
-      }
-      
-      return JSON.parse(jsonMatch[0]);
-    } catch (geminiError) {
-      console.log('Gemini API failed, using mock meal plan service:', geminiError.message);
-      // Fall back to mock service
-      return await generateMockMealPlan(preferences, days);
-    }
-  } catch (error) {
-    console.error('Meal plan generation error:', error);
-    throw new Error('Failed to generate meal plan. Please try again.');
-  }
-};
 
 module.exports = {
-  generateRecipe,
-  generateMealPlan
+  generateRecipe
 }; 

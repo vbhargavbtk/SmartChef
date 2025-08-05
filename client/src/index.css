@@ -50,4 +50,32 @@
   .bg-gradient-secondary {
     @apply bg-gradient-to-r from-secondary-500 to-secondary-600;
   }
+  
+  /* Custom scrollbar for history sidebar */
+  .history-sidebar::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  .history-sidebar::-webkit-scrollbar-track {
+    background: #f1f5f9;
+  }
+  
+  .history-sidebar::-webkit-scrollbar-thumb {
+    background: #f97316;
+    border-radius: 3px;
+  }
+  
+  .history-sidebar::-webkit-scrollbar-thumb:hover {
+    background: #ea580c;
+  }
+  
+  /* Smooth transitions for sidebar */
+  .history-sidebar {
+    will-change: transform;
+  }
+  
+  /* Prevent body scroll when sidebar is open on mobile */
+  .sidebar-open {
+    overflow: hidden;
+  }
 } 

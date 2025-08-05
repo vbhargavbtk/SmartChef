@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
+import { useAuth } from '../contexts/AuthContext'
 import { 
   ChefHat, 
   Brain, 
@@ -12,6 +13,7 @@ import {
 } from 'lucide-react'
 
 const Home = () => {
+  const { isAuthenticated } = useAuth()
   const features = [
     {
       icon: Brain,
@@ -81,12 +83,7 @@ const Home = () => {
                 >
                   Generate Recipe
                 </Link>
-                <Link
-                  to="/meal-planner"
-                  className="btn-secondary text-lg px-8 py-3"
-                >
-                  Plan My Week
-                </Link>
+
               </div>
             </motion.div>
           </div>
@@ -180,12 +177,14 @@ const Home = () => {
               Start creating amazing meals with AI-powered recipe generation and smart meal planning.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link
-                to="/register"
-                className="bg-white text-primary-600 hover:bg-gray-100 font-medium py-3 px-8 rounded-lg transition-colors duration-200"
-              >
-                Get Started Free
-              </Link>
+              {!isAuthenticated && (
+                <Link
+                  to="/register"
+                  className="bg-white text-primary-600 hover:bg-gray-100 font-medium py-3 px-8 rounded-lg transition-colors duration-200"
+                >
+                  Get Started Free
+                </Link>
+              )}
               <Link
                 to="/recipe-generator"
                 className="border border-white text-white hover:bg-white hover:text-primary-600 font-medium py-3 px-8 rounded-lg transition-colors duration-200"

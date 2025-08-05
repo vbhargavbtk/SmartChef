@@ -26,10 +26,7 @@ const userSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Recipe'
   }],
-  mealPlans: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'MealPlan'
-  }],
+
   preferences: {
     dietaryRestrictions: [{
       type: String,

@@ -97,11 +97,11 @@ export const AuthProvider = ({ children }) => {
   const value = {
     user,
     loading,
+    isAuthenticated: !!user,
     login,
     register,
     logout,
-    updateUser,
-    isAuthenticated: !!user
+    updateUser
   }
 
   return (
