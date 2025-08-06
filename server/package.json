@@ -1,7 +1,7 @@
 {
-  "name": "smartchef-server",
+  "name": "yoursmartchef-server",
   "version": "1.0.0",
-  "description": "SmartChef Backend API",
+  "description": "YourSmartChef Backend API",
   "main": "server.js",
   "engines": {
     "node": "20.x"

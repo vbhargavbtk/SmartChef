@@ -71,7 +71,7 @@ const Home = () => {
               </div>
               <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6">
                 Welcome to{' '}
-                <span className="text-gradient">SmartChef</span>
+                <span className="text-gradient">YourSmartChef</span>
               </h1>
               <p className="text-xl md:text-2xl text-gray-600 mb-8 max-w-3xl mx-auto">
                 Your AI-powered kitchen companion. Generate recipes, plan meals, and create grocery lists with the help of artificial intelligence.
@@ -98,7 +98,7 @@ const Home = () => {
               Everything you need for smart cooking
             </h2>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              SmartChef combines the power of AI with intuitive design to revolutionize your kitchen experience.
+                              YourSmartChef combines the power of AI with intuitive design to revolutionize your kitchen experience.
             </p>
           </div>
 
@@ -131,7 +131,7 @@ const Home = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Why choose SmartChef?
+              Why choose YourSmartChef?
             </h2>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
               Join thousands of home cooks who have transformed their kitchen experience.

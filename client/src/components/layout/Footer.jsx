@@ -8,7 +8,7 @@ const Footer = () => {
           {/* Simple brand */}
           <div className="flex items-center space-x-2">
             <ChefHat className="h-6 w-6 text-orange-500" />
-            <span className="text-lg font-semibold">SmartChef</span>
+            <span className="text-lg font-semibold">YourSmartChef</span>
           </div>
           {/* Simple description */}
           <p className="text-gray-400 text-sm text-center max-w-md">

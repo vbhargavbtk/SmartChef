@@ -11,7 +11,7 @@ const generateRecipe = async (ingredients, preferences = {}, cuisine = '', maxCo
     try {
       const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-      const prompt = `You are SmartChef, a helpful AI chef. Given the ingredients: ${ingredients.join(', ')}, dietary preferences: ${preferences.diet || 'none'}, cuisine: ${cuisine || 'any'}, max cook time: ${maxCookTime} minutes, difficulty level: ${difficulty}, servings: ${servings}, generate a recipe in JSON format:
+      const prompt = `You are YourSmartChef, a helpful AI chef. Given the ingredients: ${ingredients.join(', ')}, dietary preferences: ${preferences.diet || 'none'}, cuisine: ${cuisine || 'any'}, max cook time: ${maxCookTime} minutes, difficulty level: ${difficulty}, servings: ${servings}, generate a recipe in JSON format:
 
 {
   "title": "Recipe Title",

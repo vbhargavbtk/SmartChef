@@ -27,7 +27,7 @@ const Navbar = () => {
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-2">
             <ChefHat className="h-8 w-8 text-primary-600" />
-            <span className="text-xl font-bold text-gradient">SmartChef</span>
+            <span className="text-xl font-bold text-gradient">YourSmartChef</span>
           </Link>
 
           {/* Desktop Navigation */}

@@ -51,13 +51,13 @@ app.use('/api/grocery-list', groceryListRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK', message: 'SmartChef API is running' });
+  res.json({ status: 'OK', message: 'YourSmartChef API is running' });
 });
 
 // Root endpoint for testing
 app.get('/', (req, res) => {
   res.json({ 
-    message: 'SmartChef Backend API is running!',
+    message: 'YourSmartChef Backend API is running!',
     endpoints: {
       health: '/api/health',
       auth: '/api/auth',
