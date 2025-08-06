@@ -1,10 +1,6 @@
 # Dependencies
 node_modules/
 */node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
 
 # Environment variables
 .env
@@ -12,9 +8,7 @@ pnpm-debug.log*
 .env.development.local
 .env.test.local
 .env.production.local
-.env.example
 config.env
-*.env
 
 # Build outputs
 dist/
@@ -46,9 +40,6 @@ coverage/
 # nyc test coverage
 .nyc_output
 
-# Dependency directories
-jspm_packages/
-
 # Optional npm cache directory
 .npm
 
@@ -74,12 +65,7 @@ jspm_packages/
 .cache
 .parcel-cache
 
-# Gatsby files
-.cache/
-public
-
 # Storybook build outputs
-.out
 .storybook-out
 
 # Temporary folders
@@ -116,21 +102,11 @@ Thumbs.db
 # Vercel
 .vercel/
 
-# Deployment scripts and documentation
-deploy-*.sh
-deploy-*.ps1
-deploy-*.md
-RAILWAY_DEPLOYMENT.md
-HEROKU_DEPLOYMENT.md
-DEPLOYMENT.md
-
 # Package lock files (will be regenerated)
 package-lock.json
 */package-lock.json
-
-# Local development files
-*.local
-local.*
+yarn.lock
+pnpm-lock.yaml
 
 # Database files
 *.db
@@ -141,9 +117,6 @@ local.*
 *.bak
 *.backup
 
-# Lock files (keep yarn.lock if using yarn)
-# yarn.lock
-
 # IDE specific files
 .atom/
 .brackets.json
@@ -151,12 +124,9 @@ local.*
 .sublime-workspace
 
 # Testing
-coverage/
-.nyc_output/
 test-results/
 playwright-report/
 playwright/.cache/
 
 # Misc
-*.tgz
 *.tar.gz 
