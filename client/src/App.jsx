@@ -7,6 +7,7 @@ import Login from './pages/Login'
 import Register from './pages/Register'
 import Dashboard from './pages/Dashboard'
 import RecipeGenerator from './pages/RecipeGenerator'
+import SavedRecipes from './pages/SavedRecipes'
 
 import GroceryList from './pages/GroceryList'
 import ProtectedRoute from './components/auth/ProtectedRoute'
@@ -35,6 +36,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <RecipeGenerator />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/saved-recipes" 
+            element={
+              <ProtectedRoute>
+                <SavedRecipes />
               </ProtectedRoute>
             } 
           />
