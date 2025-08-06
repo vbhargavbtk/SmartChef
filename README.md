@@ -129,12 +129,7 @@ Smart Chef/
 3. Make your changes
 4. Submit a pull request
 
----
 
-## 🙏 Acknowledgments
-- Google Gemini AI for recipe generation
-- MongoDB Atlas for database hosting
-- Netlify, Vercel, and Render.com for hosting
 
 ---
 
