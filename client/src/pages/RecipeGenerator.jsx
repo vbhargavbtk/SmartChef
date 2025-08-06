@@ -503,7 +503,7 @@ const RecipeGenerator = () => {
               )}
             </div>
           </div>
-        )}
+        )&rbrace;
 
         {/* Main Content */}
         <div className="flex-1">

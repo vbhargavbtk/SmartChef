@@ -20,6 +20,29 @@ router.get('/', auth, async (req, res) => {
   }
 });
 
+// Get current grocery list (most recent or create new one)
+router.get('/current', auth, async (req, res) => {
+  try {
+    let groceryList = await GroceryList.findOne({ userId: req.user._id })
+      .sort({ updatedAt: -1 });
+    
+    if (!groceryList) {
+      // Create a new empty grocery list
+      groceryList = new GroceryList({
+        userId: req.user._id,
+        name: 'My Grocery List',
+        items: []
+      });
+      await groceryList.save();
+    }
+    
+    res.json(groceryList);
+  } catch (error) {
+    console.error('Get current grocery list error:', error);
+    res.status(500).json({ error: 'Failed to fetch current grocery list' });
+  }
+});
+
 // Save grocery list
 router.post('/save', auth, [
   body('items').isArray().withMessage('Items array is required')
@@ -31,6 +54,11 @@ router.post('/save', auth, [
     }
 
     const { items, name = 'My Grocery List' } = req.body;
+
+    // Validate items structure
+    if (!Array.isArray(items)) {
+      return res.status(400).json({ error: 'Items must be an array' });
+    }
 
     // Find existing grocery list or create new one
     let groceryList = await GroceryList.findOne({ userId: req.user._id });
@@ -121,7 +149,7 @@ router.post('/from-recipes', auth, [
 
     // Convert map to array and format for frontend
     const groceryItems = Array.from(ingredientMap.values()).map(ingredient => ({
-      id: Date.now() + Math.random(), // Generate unique ID
+      _id: Date.now() + Math.random(), // Generate unique ID
       name: ingredient.name,
       category: capitalizeFirst(ingredient.category || 'Other'),
       quantity: 1,
@@ -173,6 +201,33 @@ function combineAmounts(amount1, amount2) {
   
   return unit ? `${total} ${unit}`.trim() : total.toString();
 }
+
+// Debug endpoint to check grocery list status
+router.get('/debug', auth, async (req, res) => {
+  try {
+    const groceryLists = await GroceryList.find({ userId: req.user._id });
+    const currentList = await GroceryList.findOne({ userId: req.user._id }).sort({ updatedAt: -1 });
+    
+    res.json({
+      totalLists: groceryLists.length,
+      currentList: currentList ? {
+        id: currentList._id,
+        name: currentList.name,
+        itemCount: currentList.items.length,
+        updatedAt: currentList.updatedAt
+      } : null,
+      allLists: groceryLists.map(list => ({
+        id: list._id,
+        name: list.name,
+        itemCount: list.items.length,
+        updatedAt: list.updatedAt
+      }))
+    });
+  } catch (error) {
+    console.error('Debug grocery list error:', error);
+    res.status(500).json({ error: 'Failed to debug grocery list' });
+  }
+});
 
 // Update grocery list item
 router.put('/item/:itemId', auth, [

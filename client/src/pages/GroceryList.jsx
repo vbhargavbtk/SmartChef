@@ -92,7 +92,8 @@ const GroceryList = () => {
       const item = {
         name: newItem.trim(),
         category: newItemCategory,
-        checked: false
+        checked: false,
+        tempId: Date.now() + Math.random() // Temporary ID for local operations
       }
       
       // Update local state immediately for better UX
@@ -117,7 +118,7 @@ const GroceryList = () => {
   const removeItem = async (itemId) => {
     try {
       // Update local state immediately for better UX
-      const updatedList = groceryList.filter(item => item._id !== itemId);
+      const updatedList = groceryList.filter(item => (item._id !== itemId && item.tempId !== itemId));
       setGroceryList(updatedList);
       
       // Save the updated list to backend
@@ -134,12 +135,12 @@ const GroceryList = () => {
 
   const toggleItem = async (itemId) => {
     try {
-      const updatedItem = groceryList.find(item => item._id === itemId);
+      const updatedItem = groceryList.find(item => (item._id === itemId || item.tempId === itemId));
       const newChecked = !updatedItem.checked;
       
       // Update local state immediately for better UX
       const updatedList = groceryList.map(item => 
-        item._id === itemId ? { ...item, checked: newChecked } : item
+        (item._id === itemId || item.tempId === itemId) ? { ...item, checked: newChecked } : item
       );
       setGroceryList(updatedList);
       
@@ -451,10 +452,10 @@ const GroceryList = () => {
                         </h3>
                         <div className="space-y-3">
                           {items.map(item => (
-                            <div key={item._id} className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+                            <div key={item._id || item.tempId} className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow">
                               <div className="flex items-center space-x-4 flex-1">
                                 <button
-                                  onClick={() => toggleItem(item._id)}
+                                  onClick={() => toggleItem(item._id || item.tempId)}
                                   className="text-gray-400 hover:text-primary-600 transition-colors flex-shrink-0"
                                 >
                                   {item.checked ? (
@@ -473,7 +474,7 @@ const GroceryList = () => {
                               
                               <div className="flex items-center space-x-4">
                                 <button
-                                  onClick={() => removeItem(item._id)}
+                                  onClick={() => removeItem(item._id || item.tempId)}
                                   className="text-gray-400 hover:text-red-500 transition-colors p-2 rounded-lg hover:bg-red-50"
                                 >
                                   <Trash2 className="h-5 w-5" />
