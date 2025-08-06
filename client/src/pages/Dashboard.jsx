@@ -113,26 +113,7 @@ const Dashboard = () => {
            <h1 className="text-3xl font-bold text-gray-900">
              Welcome back, {user?.name}! 👋
            </h1>
-           <p className="text-gray-600 mt-2">
-             Ready to create something delicious today?
-           </p>
-           {/* Test button for debugging */}
-           <button 
-             onClick={() => {
-               const testRecipe = {
-                 title: 'Test Recipe',
-                 cookTime: 30,
-                 servings: 4,
-                 difficulty: 'Easy',
-                 ingredients: ['Test ingredient 1', 'Test ingredient 2'],
-                 instructions: ['Test instruction 1', 'Test instruction 2']
-               }
-               setSelectedRecipe(testRecipe)
-             }}
-             className="mt-4 px-4 py-2 bg-red-500 text-white rounded-lg text-sm"
-           >
-             Test Modal
-           </button>
+           
          </div>
 
         {/* Stats Cards */}
