@@ -28,7 +28,7 @@ const Login = () => {
     const result = await login(formData.email, formData.password)
     
     if (result.success) {
-      navigate('/dashboard')
+      navigate('/recipe-generator')
     }
     
     setLoading(false)
