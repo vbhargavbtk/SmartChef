@@ -2,11 +2,6 @@
 
 A full-stack web application that uses AI to generate recipes, plan meals, and create grocery lists.
 
-## 🚀 Live Application
-
-- **Frontend:** [Deployed on your chosen platform]
-- **Backend:** [Deployed on your chosen platform]
-
 ## ✨ Features
 
 - **AI Recipe Generation** - Generate recipes based on ingredients or preferences
@@ -14,6 +9,8 @@ A full-stack web application that uses AI to generate recipes, plan meals, and c
 - **Grocery Lists** - Automatically generate shopping lists
 - **User Authentication** - Secure login and registration
 - **Responsive Design** - Works on desktop and mobile
+
+## 🚀 Live Application  [ https://yoursmartchef.netlify.app/ ]
 
 ## 🛠️ Tech Stack
 
